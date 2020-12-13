@@ -3,7 +3,17 @@
         <title>Twwiki</title>
     </head>
     <body>
-        <p>Hi there!</p>
-        <p>It works!</p>
+        
+    <p>hi</p>
+
+    {% for tweet in tweets %}
+    <div>
+        <p>created: {{ tweet.created_date }}</p>
+        <p>{{ tweet.text|linebreaksbr }}</p>
+    </div>
+    {% endfor %}
+
+
+
     </body>
 </html>
