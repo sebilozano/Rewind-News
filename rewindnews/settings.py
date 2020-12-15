@@ -41,8 +41,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'twwiki_twitter_bot.apps.TwwikiTwitterBotConfig',
-    'django_q'
+    'twwiki_twitter_bot.apps.TwwikiTwitterBotConfig'
 ]
 
 MIDDLEWARE = [
@@ -125,10 +124,3 @@ USE_TZ = True
 
 STATIC_URL = '/static/'
 STATIC_ROOT = os.path.join(BASE_DIR, 'static')
-
-# Configure your Q cluster
-# More details https://django-q.readthedocs.io/en/latest/configure.html
-Q_CLUSTER = {
-    "name": "twwiki",
-    "orm": "default",  # Use Django's ORM + database for broker
-}
