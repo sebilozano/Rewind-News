@@ -51,6 +51,4 @@ def tweetEvents():
     api = tweepy.API(auth)
 
     for tweet in wiki_tweet_list:
-        print(tweet)
-        print("-------")
-        #api.update_status(tweet)
+        api.update_status(tweet)
