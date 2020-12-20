@@ -20,9 +20,9 @@ def getOnThisDayTweets():
     originalHeader = mp_otd.find("p")
     todayString = originalHeader.find("b").text
     todayStringToMatch = todayString + ": "
-    cleaned_header = mp_otd.find("p").text.replace(todayStringToMatch, '')
-    cleaned_header = cleaned_header.replace('\n', '')
-    if (cleaned_header != originalHeader):
+    almost_cleaned_header = mp_otd.find("p").text.replace(todayStringToMatch, '')
+    cleaned_header = almost_cleaned_header.replace('\n', '').strip()
+    if (almost_cleaned_header != originalHeader.text):
         constructed_tweet = "Today is also known as " 
         if len(cleaned_header.split("; ")) > 1:
             for i, dayName in enumerate(cleaned_header.split("; ")):
@@ -40,7 +40,7 @@ def getOnThisDayTweets():
         cleaned_bullet = "#OnThisDay in " + bullet.text.replace(' (pictured)', '') #remove (pictured) reference
         cleaned_bullet_trunc = (cleaned_bullet[:277] + '...') if len(cleaned_bullet) > 280 else cleaned_bullet
 
-        wiki_tweets.append(cleaned_bullet)
+        wiki_tweets.append(cleaned_bullet_trunc)
 
     return wiki_tweets
 
