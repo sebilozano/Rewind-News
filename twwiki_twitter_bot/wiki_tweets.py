@@ -3,6 +3,7 @@ from bs4 import BeautifulSoup
 import wikipedia
 import os
 import tweepy
+import requests
 from dotenv import load_dotenv
 load_dotenv()
 
@@ -51,4 +52,61 @@ def tweetEvents():
     api = tweepy.API(auth)
 
     for tweet in wiki_tweet_list:
+        # here is where I have to add the logic TODO
         api.update_status(tweet)
+
+def getRequestLinkFromTweet(tweet):
+    print("TODO")
+
+
+def downloadImage(img_path):
+    print("TODO")
+    print("return location of img")
+
+
+def getTweetImage(requestLink):
+    soup = BeautifulSoup(requests.get(requestLink).content)
+    infobox = soup.find("table", {"class": "infobox"})
+
+    img_arr = []
+
+    img_path = ''
+    index = 0
+
+    for i, tr in enumerate(infobox.find_all("tr")):
+        images_in_row = tr.find_all("a", {"class": "image"})
+        numImagesInRow = len(images_in_row)
+
+        row_img_list = []
+        for j, img in enumerate(images_in_row):
+            row_img_list.append(img['href'])
+
+        if (len(row_img_list) == 1):
+            img_path = row_img_list[0]
+            break
+        elif (len(row_img_list) > 1):
+            img_arr.insert(index, row_img_list)
+            index += 1
+
+
+
+    if (img_path == '' and len(img_arr) > 0):
+        img_path = img_arr[0][0]
+    elif (img_path == ''):
+        img_path = ''
+        # TODO: no img in infobox
+        # content = soup.find("div", {"class": "mw-parser-output"})
+
+        # #remove junk
+        # for div in content.find_all(("div", {"class": "navbox"})):
+        #     div.decompose()
+
+        # img_link_list = content.find_all("a", {"class": "image"})
+        
+    if (img_path != ''):
+        # create url
+        img_path = 'https://en.wikipedia.org' + (img_path)
+        return img_path
+    
+    return img_path
+    

@@ -4,35 +4,80 @@ import requests
 import wiki_tweets
 import os
 import tweepy
+import requests
 from dotenv import load_dotenv
 load_dotenv()
 
-soup = BeautifulSoup(wikipedia.WikipediaPage(pageid = '15580374').html())
-mp_otd = soup.find("div", {"id": "mp-otd"})
-wiki_tweets = []
-## pull whether this is a named day
-originalHeader = mp_otd.find("p")
-todayString = originalHeader.find("b").text
-todayStringToMatch = todayString + ": "
-almost_cleaned_header = mp_otd.find("p").text.replace(todayStringToMatch, '')
-cleaned_header = almost_cleaned_header.replace('\n', '').strip()
-if (almost_cleaned_header != originalHeader.text):
-    constructed_tweet = "Today is also known as " 
-    if len(cleaned_header.split("; ")) > 1:
-        for i, dayName in enumerate(cleaned_header.split("; ")):
-            if i > 0:
-                constructed_tweet = constructed_tweet + " and " + dayName 
-            else: constructed_tweet = constructed_tweet + dayName
-    else:
-        constructed_tweet = constructed_tweet + cleaned_header
-    wiki_tweets.append(constructed_tweet)
-## pull the list of events for that day
-otd_event_list_html = mp_otd.ul
-for bullet in otd_event_list_html.find_all("li"):
-    cleaned_bullet = "#OnThisDay in " + bullet.text.replace(' (pictured)', '') #remove (pictured) reference
-    cleaned_bullet_trunc = (cleaned_bullet[:277] + '...') if len(cleaned_bullet) > 280 else cleaned_bullet
-    wiki_tweets.append(cleaned_bullet_trunc)
-    print(cleaned_bullet_trunc)
-    print('--------')
 
-print(wiki_tweets[0])
+
+# for each <tr> in infobox
+#     put images in an array
+#     count images
+#     if count(img) = 1, then stop
+#     else continue
+# if len(img_arr) > 0, then get img_arr[1]
+# else getAllImages 
+
+soup = BeautifulSoup(requests.get("https://en.wikipedia.org/wiki/Plymouth_Colony").content)
+infobox = soup.find("table", {"class": "infobox"})
+
+#print(infobox.find_all("tr"))
+
+img_arr = []
+
+print(len(img_arr))
+
+img_path = ''
+index = 0
+
+for i, tr in enumerate(infobox.find_all("tr")):
+    images_in_row = tr.find_all("a", {"class": "image"})
+    numImagesInRow = len(images_in_row)
+
+    row_img_list = []
+    for j, img in enumerate(images_in_row):
+        row_img_list.append(img['href'])
+    
+    if (len(row_img_list) == 1):
+        img_path = row_img_list[0]
+        break
+    elif (len(row_img_list) > 1):
+        img_arr.insert(index, row_img_list)
+        index += 1
+
+    
+
+if (img_path == '' and len(img_arr) > 0):
+    img_link = img_arr[0][0]
+elif (img_path == ''):
+    img_path = ''
+    # to do: no img in infobox
+    # content = soup.find("div", {"class": "mw-parser-output"})
+
+    # #remove junk
+    # for div in content.find_all(("div", {"class": "navbox"})):
+    #     div.decompose()
+    
+    # img_link_list = content.find_all("a", {"class": "image"})
+    # print(len(img_link_list))
+
+if (img_path != ''):
+    # create url
+    img_path = 'https://en.wikipedia.org' + (img_path)
+    print(img_path)
+    
+
+
+
+
+
+
+
+
+
+    
+
+
+
+
+
