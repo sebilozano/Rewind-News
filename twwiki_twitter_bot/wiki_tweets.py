@@ -4,6 +4,9 @@ import wikipedia
 import os
 import tweepy
 import requests
+from django.conf import settings
+from urllib.error import HTTPError
+from urllib.request import urlretrieve
 from dotenv import load_dotenv
 load_dotenv()
 
@@ -38,6 +41,14 @@ def getOnThisDayTweets():
     ## pull the list of events for that day
     otd_event_list_html = mp_otd.ul
     for bullet in otd_event_list_html.find_all("li"):
+        #get bolded link
+        page_link = getRequestLinkFromBoldedContent(bullet, "https://en.wikipedia.org")
+        tweet_img_link = getTweetImageLink(page_link)
+        if (tweet_img_link != ''):
+            print(tweet_img_link)
+            local_img_path = downloadImage(tweet_img_link)
+        
+
         cleaned_bullet = "#OnThisDay in " + bullet.text.replace(' (pictured)', '') #remove (pictured) reference
         cleaned_bullet_trunc = (cleaned_bullet[:277] + '...') if len(cleaned_bullet) > 280 else cleaned_bullet
 
@@ -55,19 +66,46 @@ def tweetEvents():
         # here is where I have to add the logic TODO
         api.update_status(tweet)
 
-def getRequestLinkFromTweet(tweet):
+def getRequestLinkFromBoldedContent(content, domain):
+    bolded_part = content.find("b")
+    page_link = domain + bolded_part.find("a")["href"]
+    return page_link
     print("TODO")
 
 
 def downloadImage(img_path):
     print("TODO")
-    print("return location of img")
+    soup = BeautifulSoup(requests.get(img_path).content)
+    img_link = "https:" + soup.find("div", {"class": "fullImageLink"}).find("a")["href"]
+    path_split = img_path.split("/")
+    img_name = path_split[len(path_split) - 1].replace("File:", '')
+    #print(settings.MEDIA_ROOT + "/" + img_name)
+    
+    try:
+        #file, header = urlretrieve(img_link)
+        print("hi") 
+        #print(header)
+    except FileNotFoundError as err:
+        print(err)   # something wrong with local path
+        return ''
+    except HTTPError as err:
+        print(err)  # something wrong with url
+        return ''
+    
+
+    print("return location of img on system")
 
 
-def getTweetImage(requestLink):
+def getTweetImageLink(requestLink):
     soup = BeautifulSoup(requests.get(requestLink).content)
     infobox = soup.find("table", {"class": "infobox"})
 
+    if infobox == None: # sometimes there isn't an infobox (i.e https://en.wikipedia.org/wiki/1990_Slovenian_independence_referendum)
+        infobox = soup.find("table", {"class": "vcard"})
+
+    if infobox == None: # error handling if there isn't either
+        return ''
+    
     img_arr = []
 
     img_path = ''
