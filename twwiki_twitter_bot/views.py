@@ -10,3 +10,7 @@ from .wiki_test import mainMethod
 def testView(request):
     testMats = mainMethod()
     return render(request, 'twwiki_twitter_bot/test.html', {'testMats': testMats})
+
+
+def nada(request):
+    return render(request, 'twwiki_twitter_bot/nada.html')
