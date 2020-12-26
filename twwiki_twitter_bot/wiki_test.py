@@ -1,20 +1,21 @@
-from bs4 import BeautifulSoup
-import wikipedia
-import requests
-import wiki_tweets
-import os
-import tweepy
-import requests
-from pathlib import Path
+from . import wiki_tweets
+from django.conf import settings
 from dotenv import load_dotenv
 load_dotenv()
 
+''' #settings.configure()
+import os
+import django
+import sys
+print(sys.path)
+django.setup()
+#print(settings.STATIC_URL)
+#print(settings)
+ '''
 
-wiki_tweets.getOnThisDayTweets()
+def mainMethod():
+    #return wiki_tweets.getOnThisDayTweets
+    return wiki_tweets.tweetEvents()
+    #return settings
 
-def getRequestLinkFromTweet():
-    tweet = ''
-    
-
-
-#getRequestLinkFromTweet()
+#wiki_tweets.getOnThisDayTweets()

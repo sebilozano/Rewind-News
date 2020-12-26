@@ -1,12 +1,13 @@
 from django.utils import timezone
 from bs4 import BeautifulSoup
+from .models import Wiki_Tweet
 import wikipedia
 import os
 import tweepy
 import requests
-from django.conf import settings
 from urllib.error import HTTPError
 from urllib.request import urlretrieve
+from django.conf import settings
 from dotenv import load_dotenv
 load_dotenv()
 
@@ -15,7 +16,7 @@ load_dotenv()
 
 def getOnThisDayTweets():
 
-    soup = BeautifulSoup(wikipedia.WikipediaPage(pageid = '15580374').html())
+    soup = BeautifulSoup(wikipedia.WikipediaPage(pageid = '15580374').html(), features="html.parser")
     mp_otd = soup.find("div", {"id": "mp-otd"})
 
     wiki_tweets = []
@@ -36,23 +37,29 @@ def getOnThisDayTweets():
         else:
             constructed_tweet = constructed_tweet + cleaned_header
 
-        wiki_tweets.append(constructed_tweet)
+        wiki_tweet = Wiki_Tweet()
+        wiki_tweet.setText(constructed_tweet)
+        wiki_tweet.setHTML(todayString)
+        wiki_tweets.append(wiki_tweet)
 
     ## pull the list of events for that day
     otd_event_list_html = mp_otd.ul
     for bullet in otd_event_list_html.find_all("li"):
+        wiki_tweet = Wiki_Tweet()
+        wiki_tweet.setHTML = bullet
         #get bolded link
         page_link = getRequestLinkFromBoldedContent(bullet, "https://en.wikipedia.org")
         tweet_img_link = getTweetImageLink(page_link)
         if (tweet_img_link != ''):
-            print(tweet_img_link)
-            local_img_path = downloadImage(tweet_img_link)
+            img_file = downloadImage(tweet_img_link)
+            wiki_tweet.setMainMedia(img_file)
         
-
-        cleaned_bullet = "#OnThisDay in " + bullet.text.replace(' (pictured)', '') #remove (pictured) reference
+        cleaned_bullet = "#OnThisDay in " + bullet
+        #handle long tweets
         cleaned_bullet_trunc = (cleaned_bullet[:277] + '...') if len(cleaned_bullet) > 280 else cleaned_bullet
+        wiki_tweet.setText(cleaned_bullet_trunc)
 
-        wiki_tweets.append(cleaned_bullet_trunc)
+        wiki_tweets.append(wiki_tweet)
 
     return wiki_tweets
 
@@ -62,42 +69,40 @@ def tweetEvents():
     auth.set_access_token(os.getenv("bot_access_token"), os.getenv("bot_access_token_secret"))
     api = tweepy.API(auth)
 
-    for tweet in wiki_tweet_list:
-        # here is where I have to add the logic TODO
-        api.update_status(tweet)
+    for wiki_tweet in wiki_tweet_list:
+        
+        if wiki_tweet.mainMedia != None:
+            media_obj = api.media_upload(wiki_tweet.mainMedia)
+            api.update_status(status=wiki_tweet.text, media_ids = [media_obj.media_id])
+        else:
+            api.update_status(status=wiki_tweet.text)
 
 def getRequestLinkFromBoldedContent(content, domain):
     bolded_part = content.find("b")
     page_link = domain + bolded_part.find("a")["href"]
     return page_link
-    print("TODO")
-
 
 def downloadImage(img_path):
-    print("TODO")
-    soup = BeautifulSoup(requests.get(img_path).content)
+    soup = BeautifulSoup(requests.get(img_path).content, features="html.parser")
     img_link = "https:" + soup.find("div", {"class": "fullImageLink"}).find("a")["href"]
     path_split = img_path.split("/")
     img_name = path_split[len(path_split) - 1].replace("File:", '')
-    #print(settings.MEDIA_ROOT + "/" + img_name)
-    
+    save_path = settings.MEDIA_ROOT + "/" + img_name
     try:
-        #file, header = urlretrieve(img_link)
-        print("hi") 
-        #print(header)
+        file, header = urlretrieve(img_link, save_path)
+        return file
     except FileNotFoundError as err:
         print(err)   # something wrong with local path
         return ''
     except HTTPError as err:
         print(err)  # something wrong with url
         return ''
-    
-
-    print("return location of img on system")
-
+    except:
+        print("other exception downloading image")
+        return ''
 
 def getTweetImageLink(requestLink):
-    soup = BeautifulSoup(requests.get(requestLink).content)
+    soup = BeautifulSoup(requests.get(requestLink).content, features="html.parser")
     infobox = soup.find("table", {"class": "infobox"})
 
     if infobox == None: # sometimes there isn't an infobox (i.e https://en.wikipedia.org/wiki/1990_Slovenian_independence_referendum)
