@@ -1,4 +1,4 @@
-import wiki_tweets
+from . import wiki_tweets
 
 #run daily
 wiki_tweets.tweetEvents()
