@@ -54,7 +54,7 @@ def getOnThisDayTweets():
             img_file = downloadImage(tweet_img_link)
             wiki_tweet.setMainMedia(img_file)
         
-        cleaned_bullet = "#OnThisDay in " + bullet
+        cleaned_bullet = "#OnThisDay in " + bullet.text
         #handle long tweets
         cleaned_bullet_trunc = (cleaned_bullet[:277] + '...') if len(cleaned_bullet) > 280 else cleaned_bullet
         wiki_tweet.setText(cleaned_bullet_trunc)
