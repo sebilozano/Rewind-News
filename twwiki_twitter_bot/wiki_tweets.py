@@ -92,8 +92,8 @@ def tweetEvents():
         except TweepError as err:
             print(err)
             continue
-        except:
-            print("unknown error")
+        except Exception as e:
+            print(e)
             continue
 
     #clean media folder
