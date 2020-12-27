@@ -4,3 +4,4 @@ wikipedia
 beautifulsoup4
 tweepy
 requests
+Pillow
