@@ -5,6 +5,7 @@ import wikipedia
 import os
 import tweepy
 import requests
+from PIL import Image
 from urllib.error import HTTPError
 from urllib.request import urlretrieve
 from django.conf import settings
@@ -47,6 +48,7 @@ def getOnThisDayTweets():
     for bullet in otd_event_list_html.find_all("li"):
         wiki_tweet = Wiki_Tweet()
         wiki_tweet.setHTML = bullet
+
         #get bolded link
         page_link = getRequestLinkFromBoldedContent(bullet, "https://en.wikipedia.org")
         tweet_img_link = getTweetImageLink(page_link)
@@ -82,6 +84,19 @@ def getRequestLinkFromBoldedContent(content, domain):
     page_link = domain + bolded_part.find("a")["href"]
     return page_link
 
+
+def optimizeImage(fileName):
+    counter = 500
+    while ((os.path.getsize(fileName) / 1000 > 4880)):
+        if (counter == 200):
+            return None
+        img = Image.open(fileName)
+        maxsize = (counter,counter)
+        img.thumbnail(maxsize)
+        img.save(fileName, optimizeImage=True)
+        counter = counter - 100
+    return fileName
+
 def downloadImage(img_path):
     soup = BeautifulSoup(requests.get(img_path).content, features="html.parser")
     img_link = "https:" + soup.find("div", {"class": "fullImageLink"}).find("a")["href"]
@@ -90,6 +105,7 @@ def downloadImage(img_path):
     save_path = settings.MEDIA_ROOT + "/" + img_name
     try:
         file, header = urlretrieve(img_link, save_path)
+        file = optimizeImage(file)
         return file
     except FileNotFoundError as err:
         print(err)   # something wrong with local path
@@ -102,54 +118,57 @@ def downloadImage(img_path):
         return ''
 
 def getTweetImageLink(requestLink):
+    print(requestLink)
     soup = BeautifulSoup(requests.get(requestLink).content, features="html.parser")
     infobox = soup.find("table", {"class": "infobox"})
 
     if infobox == None: # sometimes there isn't an infobox (i.e https://en.wikipedia.org/wiki/1990_Slovenian_independence_referendum)
         infobox = soup.find("table", {"class": "vcard"})
-
-    if infobox == None: # error handling if there isn't either
-        return ''
     
     img_arr = []
 
     img_path = ''
     index = 0
 
-    for i, tr in enumerate(infobox.find_all("tr")):
-        images_in_row = tr.find_all("a", {"class": "image"})
-        numImagesInRow = len(images_in_row)
+    if infobox != None: 
+        for i, tr in enumerate(infobox.find_all("tr")):
+            images_in_row = tr.find_all("a", {"class": "image"})
+            numImagesInRow = len(images_in_row)
 
-        row_img_list = []
-        for j, img in enumerate(images_in_row):
-            row_img_list.append(img['href'])
+            row_img_list = []
+            for j, img in enumerate(images_in_row):
+                row_img_list.append(img['href'])
 
-        if (len(row_img_list) == 1):
-            img_path = row_img_list[0]
-            break
-        elif (len(row_img_list) > 1):
-            img_arr.insert(index, row_img_list)
-            index += 1
+            if (len(row_img_list) == 1):
+                img_path = row_img_list[0]
+                break
+            elif (len(row_img_list) > 1):
+                img_arr.insert(index, row_img_list)
+                index += 1
 
 
-
+    # if no single pic, pick the first image in the infobox
     if (img_path == '' and len(img_arr) > 0):
         img_path = img_arr[0][0]
+
+    # if no pics, pick the first pic on page
     elif (img_path == ''):
-        img_path = ''
-        # TODO: no img in infobox
-        # content = soup.find("div", {"class": "mw-parser-output"})
 
-        # #remove junk
-        # for div in content.find_all(("div", {"class": "navbox"})):
-        #     div.decompose()
+        content = soup.find("div", {"class": "mw-parser-output"})
 
-        # img_link_list = content.find_all("a", {"class": "image"})
+        #remove junk for if eventually I want to pick randomly, see bottom of Plymouth Colony page
+        for div in content.find_all("div", class_='navbox'):
+            div.decompose()
+
+        #print(content.find("a", {"class": "image"}))
+        first_img_link = content.find("a", {"class": "image"})['href']
+        img_path = first_img_link
         
     if (img_path != ''):
         # create url
         img_path = 'https://en.wikipedia.org' + (img_path)
         return img_path
+    
     
     return img_path
     
