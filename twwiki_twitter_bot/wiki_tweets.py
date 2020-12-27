@@ -4,6 +4,7 @@ from .models import Wiki_Tweet
 import wikipedia
 import os
 import tweepy
+import glob
 import requests
 from PIL import Image
 from urllib.error import HTTPError
@@ -14,6 +15,10 @@ load_dotenv()
 
 
 
+def cleanMediaFolder():
+    files = glob.glob(settings.MEDIA_ROOT + "/*")
+    for f in files:
+        os.remove(f)
 
 def getOnThisDayTweets():
 
@@ -49,9 +54,14 @@ def getOnThisDayTweets():
         wiki_tweet = Wiki_Tweet()
         wiki_tweet.setHTML = bullet
 
-        #get bolded link
-        page_link = getRequestLinkFromBoldedContent(bullet, "https://en.wikipedia.org")
-        tweet_img_link = getTweetImageLink(page_link)
+        #if it says (pictured) or (depicted) in italics, then pull from that
+        if isPicturedTweet(bullet):
+            tweet_img_link = getTweetImageLinkforPicturedImageFromWikiMainPage(mp_otd, "https://en.wikipedia.org")
+        else: 
+            #get bolded link
+            page_link = getRequestLinkFromBoldedContent(bullet, "https://en.wikipedia.org")
+            tweet_img_link = getTweetImageLink(page_link)
+
         if (tweet_img_link != ''):
             img_file = downloadImage(tweet_img_link)
             wiki_tweet.setMainMedia(img_file)
@@ -73,17 +83,39 @@ def tweetEvents():
 
     for wiki_tweet in wiki_tweet_list:
         
-        if wiki_tweet.mainMedia != None:
-            media_obj = api.media_upload(wiki_tweet.mainMedia)
-            api.update_status(status=wiki_tweet.text, media_ids = [media_obj.media_id])
-        else:
-            api.update_status(status=wiki_tweet.text)
+        try: 
+            if wiki_tweet.mainMedia != None:
+                media_obj = api.media_upload(wiki_tweet.mainMedia)
+                api.update_status(status=wiki_tweet.text, media_ids = [media_obj.media_id])
+            else:
+                api.update_status(status=wiki_tweet.text)
+        except TweepError as err:
+            print(err)
+            continue
+        except:
+            print("unknown error")
+            continue
+
+    #clean media folder
+    cleanMediaFolder()
+
 
 def getRequestLinkFromBoldedContent(content, domain):
     bolded_part = content.find("b")
     page_link = domain + bolded_part.find("a")["href"]
     return page_link
 
+def getTweetImageLinkforPicturedImageFromWikiMainPage(content, domain):
+    page_link = domain + content.find("a", {"class": "image"})["href"]
+    return page_link
+
+def isPicturedTweet(content):
+    italic_parts = content.find_all("i") 
+    for i in italic_parts:
+        i = i.text.lower()
+        if ("pictured" in i) or ("depicted" in i):
+            return True
+    return False
 
 def optimizeImage(fileName):
     counter = 500
