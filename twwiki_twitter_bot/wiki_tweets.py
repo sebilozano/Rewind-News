@@ -193,8 +193,13 @@ def getTweetImageLink(requestLink):
             div.decompose()
 
         #print(content.find("a", {"class": "image"}))
-        first_img_link = content.find("a", {"class": "image"})['href']
-        img_path = first_img_link
+        first_img = content.find("a", {"class": "image"})
+        
+        if first_img != None:
+            first_img_link = first_img['href']
+            img_path = first_img_link
+        else: 
+            return ''
         
     if (img_path != ''):
         # create url
