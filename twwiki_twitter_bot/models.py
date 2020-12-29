@@ -1,6 +1,7 @@
 from django.conf import settings
 from django.db import models
 from django.utils import timezone
+import datetime
 import os
 
 # Create your models here.
@@ -11,6 +12,7 @@ class Wiki_Tweet(models.Model):
     originalHTML = models.TextField(blank=True, null=True)
     created_date = models.DateTimeField(default=timezone.now)
     published_date = models.DateTimeField(blank=True, null=True)
+    #isDateTweet = models.BooleanField(default=False)
 
     def __str__(self):
         return self.text

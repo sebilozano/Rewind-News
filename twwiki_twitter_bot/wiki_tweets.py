@@ -7,12 +7,30 @@ import tweepy
 import glob
 import requests
 from PIL import Image
+from django.utils import timezone
+import datetime
 from urllib.error import HTTPError
 from urllib.request import urlretrieve
 from django.conf import settings
 from dotenv import load_dotenv
 load_dotenv()
 
+
+#IN PROGRESS
+def tweetNextEvent():
+    # check that there are tweets created today 
+    #todayTweets = Wiki_Tweet.objects.filter(created_date__gte=timezone.make_aware(datetime.datetime.now(), timezone.get_default_timezone()).replace(hour=0, minute=0, second=0), created_date__lte=timezone.make_aware(datetime.datetime.now(), timezone.get_default_timezone()).replace(hour=23, minute=59, second=59)).order_by('created_date')
+
+    #if len(todayTweets) = 0:
+    #    tweetNextEvent()
+    # if no, create and recall this function
+    # check whether there are any unpublished ones
+    # if yes, is it a date tweet? 
+        # if yes, tweet that and the next one
+        # if no, tweet unpublished one (mark it as published)
+    # end
+    return ''
+    
 
 
 def cleanMediaFolder():
@@ -46,6 +64,7 @@ def getOnThisDayTweets():
         wiki_tweet = Wiki_Tweet()
         wiki_tweet.setText(constructed_tweet)
         wiki_tweet.setHTML(todayString)
+        #wiki_tweet.isDateTweet = True
         wiki_tweets.append(wiki_tweet)
 
     ## pull the list of events for that day
@@ -75,6 +94,12 @@ def getOnThisDayTweets():
 
     return wiki_tweets
 
+def generateTwitterAPI():
+    auth = tweepy.OAuthHandler(os.getenv("twitter_consumer_key"), os.getenv("twitter_consumer_secret"))
+    auth.set_access_token(os.getenv("bot_access_token"), os.getenv("bot_access_token_secret"))
+    api = tweepy.API(auth)
+    return api
+
 def tweetEvents():
     wiki_tweet_list = getOnThisDayTweets()
     auth = tweepy.OAuthHandler(os.getenv("twitter_consumer_key"), os.getenv("twitter_consumer_secret"))
@@ -82,19 +107,23 @@ def tweetEvents():
     api = tweepy.API(auth)
 
     for wiki_tweet in wiki_tweet_list:
-        
-        try: 
-            if wiki_tweet.mainMedia != None:
+        if wiki_tweet.mainMedia != None:
+            try:
                 media_obj = api.media_upload(wiki_tweet.mainMedia)
                 api.update_status(status=wiki_tweet.text, media_ids = [media_obj.media_id])
-            else:
+            except tweepy.TweepError as err:
+                print(err)
+                try:
+                    api.update_status(status=wiki_tweet.text)
+                except tweepy.TweepError as err:
+                    print(err)
+                    continue
+        else:
+            try:
                 api.update_status(status=wiki_tweet.text)
-        except TweepError as err:
-            print(err)
-            continue
-        except Exception as e:
-            print(e)
-            continue
+            except tweepy.TweepError as err:
+                print(err)
+                continue
 
     #clean media folder
     cleanMediaFolder()
