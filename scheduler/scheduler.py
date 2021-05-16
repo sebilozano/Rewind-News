@@ -19,13 +19,13 @@ def start():
     scheduler.add_jobstore(DjangoJobStore(), "default")
     
     ##run every 80 minutes from 8am EST to 6pm EST (1pm-11pm UTC)
-    # trigger = OrTrigger([
-    #     CronTrigger(hour='13-23', minute='*/80' timezone='UTC')
-    # ])
-
     trigger = OrTrigger([
-        CronTrigger(minute='*/1', timezone='UTC')
+         CronTrigger(hour='13-23', minute='*/80' timezone='UTC')
     ])
+
+    # trigger = OrTrigger([
+    #    CronTrigger(minute='*/1', timezone='UTC')
+    # ])
     scheduler.add_job(
         tweetNextEvent, 
         trigger=trigger,
