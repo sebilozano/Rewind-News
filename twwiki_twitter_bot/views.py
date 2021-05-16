@@ -9,8 +9,8 @@ from . import wiki_tweets
 
 
 def testView(request):
-    testMats = mainMethod()
-    return render(request, 'twwiki_twitter_bot/test.html', {'testMats': testMats})
+    wiki_tweets.tweetNextEvent()
+    return render(request, 'twwiki_twitter_bot/test.html')
 
 
 def nada(request):

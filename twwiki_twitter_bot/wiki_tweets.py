@@ -7,7 +7,6 @@ import tweepy
 import glob
 import requests
 from PIL import Image
-from django.utils import timezone
 import datetime
 from urllib.error import HTTPError
 from urllib.request import urlretrieve
@@ -16,21 +15,59 @@ from dotenv import load_dotenv
 load_dotenv()
 
 
-#IN PROGRESS
+
 def tweetNextEvent():
     # check that there are tweets created today 
-    #todayTweets = Wiki_Tweet.objects.filter(created_date__gte=timezone.make_aware(datetime.datetime.now(), timezone.get_default_timezone()).replace(hour=0, minute=0, second=0), created_date__lte=timezone.make_aware(datetime.datetime.now(), timezone.get_default_timezone()).replace(hour=23, minute=59, second=59)).order_by('created_date')
+    todayTweets = Wiki_Tweet.objects.filter(created_date__gte=timezone.make_aware(datetime.datetime.now(), timezone.get_default_timezone()).replace(hour=0, minute=0, second=0), created_date__lte=timezone.make_aware(datetime.datetime.now(), timezone.get_default_timezone()).replace(hour=23, minute=59, second=59)).order_by('created_date')
+    print("hey_tweetNextEvent")
 
-    #if len(todayTweets) = 0:
-    #    tweetNextEvent()
-    # if no, create and recall this function
-    # check whether there are any unpublished ones
-    # if yes, is it a date tweet? 
-        # if yes, tweet that and the next one
-        # if no, tweet unpublished one (mark it as published)
-    # end
-    return ''
+    if len(todayTweets) == 0:
+        getOnThisDayTweets()
+        print("hey_todayTweetsLenZero")
+        #tweetNextEvent()
+        return
+
+    print("KEPT GOING")
+    nonPublishedTodayTweets = todayTweets.filter(published_date__isnull=True).order_by('created_date')
+    if len(nonPublishedTodayTweets) > 0:
+        if nonPublishedTodayTweets[0].isDateTweet():
+            publishWikiTweet(nonPublishedTodayTweets[0])
+            publishWikiTweet(nonPublishedTodayTweets[1])
+        else:
+            publishWikiTweet(nonPublishedTodayTweets[0])
+    else: 
+        cleanMediaFolder()
     
+def publishWikiTweet(wiki_tweet):
+    api = generateTwitterAPI()
+
+    if wiki_tweet.mainMedia != None:
+        try:
+            print(wiki_tweet.mainMedia)
+            media_obj = api.media_upload(wiki_tweet.mainMedia)
+            tweetStatus = api.update_status(status=wiki_tweet.text, media_ids = [media_obj.media_id])
+            publishWikiTweetLinks(wiki_tweet.originalHTML, tweetStatus, api)
+        except tweepy.TweepError as err:
+            print(err)
+            try:
+                tweetStatus = api.update_status(status=wiki_tweet.text)
+                publishWikiTweetLinks(wiki_tweet.originalHTML, tweetStatus, api)
+            except tweepy.TweepError as err:
+                print(err)
+        except FileNotFoundError as err:
+            try:
+                tweetStatus = api.update_status(status=wiki_tweet.text)
+                publishWikiTweetLinks(wiki_tweet.originalHTML, tweetStatus, api)
+            except tweepy.TweepError as err:
+                print(err)
+    else:
+        try:
+            tweetStatus = api.update_status(status=wiki_tweet.text)
+            publishWikiTweetLinks(wiki_tweet.originalHTML, tweetStatus, api)
+        except tweepy.TweepError as err:
+            print(err)
+    
+    wiki_tweet.markAsPublished()
 
 
 def cleanMediaFolder():
@@ -39,7 +76,7 @@ def cleanMediaFolder():
         os.remove(f)
 
 def getOnThisDayTweets():
-
+    print("get those tweets!")
     soup = BeautifulSoup(wikipedia.WikipediaPage(pageid = '15580374').html(), features="html.parser")
     mp_otd = soup.find("div", {"id": "mp-otd"})
 
@@ -61,17 +98,29 @@ def getOnThisDayTweets():
         else:
             constructed_tweet = constructed_tweet + cleaned_header
 
-        wiki_tweet = Wiki_Tweet()
+
+        
+        wiki_tweet = Wiki_Tweet.create()
+        print("WIKI_TWEET STEP 0")
         wiki_tweet.setText(constructed_tweet)
-        wiki_tweet.setHTML(todayString)
-        #wiki_tweet.isDateTweet = True
+        print(wiki_tweet)
+        print("today string")
+        print(todayString)
+        wiki_tweet.setHTML(str(originalHeader))
+        wiki_tweet.markAsDateTweet()
         wiki_tweets.append(wiki_tweet)
+        print("WIKI_TWEET STEP 1")
+        print(wiki_tweets)
 
     ## pull the list of events for that day
     otd_event_list_html = mp_otd.ul
     for bullet in otd_event_list_html.find_all("li"):
-        wiki_tweet = Wiki_Tweet()
-        wiki_tweet.setHTML = bullet
+        wiki_tweet = Wiki_Tweet.create()
+        print("WIKI_TWEET STEP 2")
+        print(wiki_tweet)
+        print("COMING UP")
+        print(bullet)
+        
 
         #if it says (pictured) or (depicted) in italics, then pull from that
         if isPicturedTweet(bullet):
@@ -89,6 +138,10 @@ def getOnThisDayTweets():
         #handle long tweets
         cleaned_bullet_trunc = (cleaned_bullet[:277] + '...') if len(cleaned_bullet) > 280 else cleaned_bullet
         wiki_tweet.setText(cleaned_bullet_trunc)
+        print("WIKI_TWEET STEP 4")
+        print(wiki_tweet)
+        wiki_tweet.setHTML(str(bullet))
+        print(wiki_tweet)
 
         wiki_tweets.append(wiki_tweet)
 
@@ -100,6 +153,8 @@ def generateTwitterAPI():
     api = tweepy.API(auth)
     return api
 
+
+#DEPRECATED
 def tweetEvents():
     wiki_tweet_list = getOnThisDayTweets()
     auth = tweepy.OAuthHandler(os.getenv("twitter_consumer_key"), os.getenv("twitter_consumer_secret"))
@@ -238,3 +293,13 @@ def getTweetImageLink(requestLink):
     
     return img_path
     
+def publishWikiTweetLinks(content, tweetStatus, api):
+    soup = BeautifulSoup(content, features="html.parser")
+    for tag in soup.find_all("b"):
+        link = tag.find("a")
+        if link != None:
+            link = 'https://en.wikipedia.org' + str(link["href"])
+            #NOTE TODO: change this to @OnThisDayTestA1 when testing
+            linkTweet = '@OnThisDayIH ' + str(link)
+            api.update_status(status=linkTweet, in_reply_to_status_id=tweetStatus.id_str)
+    return
