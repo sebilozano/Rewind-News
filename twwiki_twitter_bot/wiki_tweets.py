@@ -15,8 +15,18 @@ from dotenv import load_dotenv
 load_dotenv()
 
 
+def tweetNextEventScheduled():
+    timestamp = datetime.datetime.now(datetime.timezone.utc).time()
+    start = datetime.time(13)
+    end = datetime.time(23)
+    print(timestamp)
+    print (start <= timestamp <= end)
+    if (start <= timestamp <= end):
+        tweetNextEvent()
+    return
 
 def tweetNextEvent():
+
     # check that there are tweets created today 
     todayTweets = Wiki_Tweet.objects.filter(created_date__gte=timezone.make_aware(datetime.datetime.now(), timezone.get_default_timezone()).replace(hour=0, minute=0, second=0), created_date__lte=timezone.make_aware(datetime.datetime.now(), timezone.get_default_timezone()).replace(hour=23, minute=59, second=59)).order_by('created_date')
     print("hey_tweetNextEvent")

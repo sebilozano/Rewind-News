@@ -17,6 +17,6 @@ def nada(request):
     return render(request, 'twwiki_twitter_bot/nada.html')
 
 def pullTweets(request):
-    wiki_tweets.tweetEvents()
+    wiki_tweets.tweetNextEventScheduled()
     return render(request, 'twwiki_twitter_bot/nada.html')
     
