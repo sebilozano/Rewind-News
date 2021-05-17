@@ -21,6 +21,7 @@ def tweetNextEvent():
     twwiki_twitter_bot.wiki_tweets.tweetNextEvent()
 
 def start():
+    
     scheduler = BackgroundScheduler()
     
     scheduler.add_jobstore(DjangoJobStore(), "default")
